@@ -144,7 +144,6 @@ if (nrow(problem_recipes) > 0) {
 # some recipes have missing levels
 unresolved <- all_dat_levels_loop  %>% filter(recipe_no<1000) %>% 
   filter(is.na(recipe_level)) %>%
-  select(name, ing_name, product_name) %>%
   distinct()
 
 if (nrow(unresolved) > 0) {
