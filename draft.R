@@ -97,56 +97,19 @@ rm(i,j,machine_name,cra_temp,mac_temp)
 all_dat <- full_join(results_dat,ingredients_dat, by = "name",relationship = "many-to-many") %>% left_join(machines_dat, by = "recipe_category",relationship = "many-to-many") %>% arrange(recipe_type, recipe_category, recipe_no, product_no, machine_name, ing_no) 
 all_dat_levels <- filter(all_dat, recipe_category != "recycling") %>% mutate(machine_name = if_else(name == "rocket-part","rocket-silo",machine_name)) %>% mutate(crafting_speed = if_else(name == "rocket-part", 1, crafting_speed))
 
+#add custom-made level 0 recipes
+basic <- read_excel("base_resources.xlsx")
 
-
-#recipe and ingredient levels
-#set initial levels for smelting
-all_dat_levels[(all_dat_levels$recipe_category=="smelting"&all_dat_levels$name!="lithium-plate")|all_dat_levels$ing_name=="crude-oil"|all_dat_levels$ing_name %in% c("uranium-ore","water","holmium ore","coal","wood","raw-fish","tungsten-ore","depleted-uranium-fuel-cell", "lithium-brine", "ammoniacal-solution", "biter-egg", "fluorine", "promethium-asteroid-chunk", "lava", "yumako", "jellynut", "pentapod-egg","metallic-asteroid-chunk","carbonic-asteroid-chunk","oxide-asteroid-chunk"),"ingredient_level"] <- 0
-#all_dat_levels[(all_dat_levels$recipe_category=="smelting"&all_dat_levels$name!="lithium-plate"),"product_level"] <- 1
-
-#set the ingredient then recipe level
-all_dat_levels <- all_dat_levels %>%
-  group_by(name) %>%  mutate(
-    recipe_level = if (any(is.na(ingredient_level))) {
-      NA_real_
-    } else {
-      max(ingredient_level) + 1
-    }
-    , product_level = NA
-  ) %>%
-  ungroup()
-
-all_dat_levels <- mutate(all_dat_levels, product_level = if_else(is.na(product_level),recipe_level,product_level))
-
-levels_0 <- filter(all_dat_levels, ingredient_level == 0) %>%  mutate(item = ing_name, level = ingredient_level) %>% select(item,level)
-levels_1 <- filter(all_dat_levels, product_level == 1) %>%  mutate(item = product_name, level = product_level) %>% select(item,level)
-levels <- rbind(levels_0,levels_1) %>% filter(item != "iron-plate" | level != 0) %>% filter(!item %in% c("uranium-ore","carbon","water","ice","calcite","stone")  | level != 1)%>% filter(item != "iron-plate" | level != 0) %>% mutate(level = if_else(item =="steel-plate", 2, level)) %>% distinct()
-
-#set the ingredient then recipe level
-all_dat_levels <- left_join(all_dat_levels, levels, by= c("product_name" = "item")) %>% mutate(product_level = if_else(is.na(product_level), level, product_level)) %>% select(-level) %>% left_join(levels, by= c("ing_name" = "item")) %>% mutate(ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level))  %>% select(-level) %>%
-  group_by(name) %>%  mutate(
-    recipe_level = if (any(is.na(ingredient_level))) {
-      NA_real_
-    } else {
-      max(ingredient_level) + 1
-    }
-  ) %>%
-  ungroup()
-
-#set product_levels
-all_dat_levels <- mutate(all_dat_levels, product_level = if_else(is.na(product_level),recipe_level,product_level))
-
-
+all_dat_levels <- all_dat_levels %>% mutate(ingredient_level = NA, product_level = NA, recipe_level = NA) %>% rbind(basic)
 
 #big loop
 levels_loop <- c()
 all_dat_levels_loop <- all_dat_levels
 n <- 0
 while(any(is.na(all_dat_levels$recipe_level)) & n < 10){
-  n <- n + 1
-  levels_loop[[n]] <- filter(all_dat_levels_loop, product_level == n) %>%  mutate(item = product_name, level = product_level) %>% select(item,level) %>% distinct() %>% as.data.frame()
+  levels_loop[[n+1]] <- filter(all_dat_levels_loop, product_level == n) %>%  mutate(item = product_name, level = product_level) %>% select(item,level) %>% distinct() %>% as.data.frame()
 
-  all_dat_levels_loop <- left_join(all_dat_levels_loop, levels_loop[[n]], by= c("ing_name" = "item")) %>% mutate(ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level))  %>% select(-level) %>% left_join(levels_loop[[n]], by= c("product_name" = "item")) %>% mutate(product_level = if_else(is.na(product_level), level, product_level)) %>% select(-level) %>% 
+  all_dat_levels_loop <- left_join(all_dat_levels_loop, levels_loop[[n+1]], by= c("ing_name" = "item")) %>% mutate(ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level))  %>% select(-level) %>% left_join(levels_loop[[n+1]], by= c("product_name" = "item")) %>% mutate(product_level = if_else(is.na(product_level), level, product_level)) %>% select(-level) %>% 
     group_by(name) %>%  mutate(
       recipe_level = if (any(is.na(ingredient_level))) {
         NA_real_
@@ -157,19 +120,16 @@ while(any(is.na(all_dat_levels$recipe_level)) & n < 10){
     ungroup()
   
   all_dat_levels_loop <- mutate(all_dat_levels_loop, product_level = if_else(is.na(product_level),recipe_level,product_level))
-  
+  n <- n + 1
 }
 rm(n)
 
-#add custom-made level 0 recipes
-basic <- read_excel("base_resources.xlsx")
 
 #put all level lists together and make sure no items are in 2 levels
-levels_all <- rbind(levels,levels_loop[[2]],levels_loop[[3]],levels_loop[[4]],levels_loop[[5]],levels_loop[[6]],levels_loop[[7]],levels_loop[[8]],levels_loop[[9]]) %>% distinct() %>% arrange(level)
+levels_all <- rbind(levels_loop[[1]],levels_loop[[2]],levels_loop[[3]],levels_loop[[4]],levels_loop[[5]],levels_loop[[6]],levels_loop[[7]],levels_loop[[8]],levels_loop[[9]]) %>% distinct() %>% arrange(level)
 
 dup_levels <- levels_all[duplicated(levels_all$item)|duplicated(levels_all$item, fromLast = TRUE),]
 
-check <- filter(all_dat_levels_loop, ing_name == "barrel"|product_name == "barrel")
 # check no recipe has ingredient_level > recipe_level
 problem_recipes <- all_dat_levels_loop %>%
   filter(!is.na(recipe_level), !is.na(ingredient_level)) %>%
@@ -182,7 +142,7 @@ if (nrow(problem_recipes) > 0) {
 
 
 # some recipes have missing levels
-unresolved <- all_dat_levels_loop %>%
+unresolved <- all_dat_levels_loop  %>% filter(recipe_no<1000) %>% 
   filter(is.na(recipe_level)) %>%
   select(name, ing_name, product_name) %>%
   distinct()
@@ -191,6 +151,9 @@ if (nrow(unresolved) > 0) {
   cat("⚠️ There are", nrow(unresolved), "recipes still unresolved")
   print(unresolved)
 }
+
+#identify which ingredients are missing
+unresolved_ings <- all_dat_levels_loop %>% filter(!ing_name %in% product_name) %>% filter(is.na(recipe_level)&recipe_no<1000) %>% select(ing_name) %>% distinct()
 
 # library(igraph)
 # 
