@@ -164,7 +164,20 @@ main_bus <- data.frame()
 choices_machines <- all_dat_levels_loop %>% select(machine_name, recipe_category, crafting_speed) %>% distinct() %>% arrange(machine_name, recipe_category, crafting_speed) %>% mutate(accessible = if_else(machine_name %in% c("assembling-machine-1","assembling-machine-2","centrifuge","chemical-plant","crusher","electric-furnace","oil-refinery","rocket-silo","steel-furnace","stone-furnace"), 1, 0))
 choices_recipes <- all_dat_levels_loop %>% select(product_name, name) %>% distinct() %>% arrange(product_name, name) %>% group_by(product_name) %>% mutate(choices = n()) %>% ungroup() %>% mutate(preferred = if_else(product_name == name|choices == 1, 1, 0)) %>% mutate(preferred = if_else(name %in% c("uranium-processing", "solid-fuel-from-petroleum-gas", "oxide-asteroid-crushing", "advanced-oil-processing", "
 advanced-oil-processing", "advanced-oil-processing", "fluoroketone-cooling", "fluoroketone", "metallic-asteroid-crushing", "carbonic-asteroid-crushing", "oxide-asteroid-crushing", "nutrients-from-fish", "fish-breeding", "	
-iron-bacteria") , 1, preferred))
+iron-bacteria") , 1, preferred)) %>% mutate(
+  preferred = case_when(
+    product_name  == "iron-ore"     ~ case_when(
+      name == "iron-ore" ~ 1,
+      TRUE ~ 0
+    ),
+    product_name  == "carbon"     ~ case_when(
+      name == "carbon" ~ 1,
+      TRUE ~ 0
+    ),
+    product_name  == "spoilage" & name == "iron-bacteria" ~ 1,
+    TRUE ~ preferred
+  )
+)
 choices_recipes_remaining <- choices_recipes %>%
   group_by(product_name) %>%
   filter(all(preferred == 0)) %>%
