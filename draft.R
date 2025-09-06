@@ -111,7 +111,10 @@ while(any(is.na(all_dat_levels$recipe_level)) & n < 10){
 
   all_dat_levels_loop <- left_join(all_dat_levels_loop, levels_loop[[n+1]], by= c("ing_name" = "item")) %>% mutate(ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level))  %>% select(-level) %>% left_join(levels_loop[[n+1]], by= c("product_name" = "item")) %>% mutate(product_level = if_else(is.na(product_level), level, product_level)) %>% select(-level) %>% 
     group_by(name) %>%  mutate(
-      recipe_level = if (any(is.na(ingredient_level))) {
+      recipe_level =
+        if (any(recipe_no>1000)) {
+        recipe_level  
+      } else if (any(is.na(ingredient_level))) {
         NA_real_
       } else {
         max(ingredient_level) + 1
@@ -154,30 +157,21 @@ if (nrow(unresolved) > 0) {
 #identify which ingredients are missing
 unresolved_ings <- all_dat_levels_loop %>% filter(!ing_name %in% product_name) %>% filter(is.na(recipe_level)&recipe_no<1000) %>% select(ing_name) %>% distinct()
 
-# library(igraph)
-# 
-# edges <- all_dat_levels_loop %>%
-#   filter(!is.na(ing_name), !is.na(product_name)) %>%
-#   select(from = ing_name, to = product_name) %>%
-#   distinct()
-# 
-# g <- graph_from_data_frame(edges)
-# plot(g, vertex.label.cex = 0.6, layout = layout_with_kk)
-# plot(g, vertex.label.cex = 0.6, layout = layout_with_fr)
-# plot(g, vertex.label.cex = 0.6, layout = layout_with_drl)
-
-
-
-
 #initialize a main bus dataframe
 main_bus <- data.frame()
 
 #will need to make a machine/recipe choice dataset
 choices_machines <- all_dat_levels_loop %>% select(machine_name, recipe_category, crafting_speed) %>% distinct() %>% arrange(machine_name, recipe_category, crafting_speed) %>% mutate(accessible = if_else(machine_name %in% c("assembling-machine-1","assembling-machine-2","centrifuge","chemical-plant","crusher","electric-furnace","oil-refinery","rocket-silo","steel-furnace","stone-furnace"), 1, 0))
-choices_recipes <- all_dat_levels_loop %>% select(product_name, name) %>% distinct() %>% arrange(product_name, name) %>% group_by(product_name) %>% mutate(choices = n()) %>% ungroup() %>% mutate(preferred = if_else(product_name == name|choices == 1, 1, 0))
+choices_recipes <- all_dat_levels_loop %>% select(product_name, name) %>% distinct() %>% arrange(product_name, name) %>% group_by(product_name) %>% mutate(choices = n()) %>% ungroup() %>% mutate(preferred = if_else(product_name == name|choices == 1, 1, 0)) %>% mutate(preferred = if_else(name %in% c("uranium-processing", "solid-fuel-from-petroleum-gas", "oxide-asteroid-crushing", "advanced-oil-processing", "
+advanced-oil-processing", "advanced-oil-processing", "fluoroketone-cooling", "fluoroketone", "metallic-asteroid-crushing", "carbonic-asteroid-crushing", "oxide-asteroid-crushing", "nutrients-from-fish", "fish-breeding", "	
+iron-bacteria") , 1, preferred))
 choices_recipes_remaining <- choices_recipes %>%
   group_by(product_name) %>%
   filter(all(preferred == 0)) %>%
+  ungroup() 
+choices_recipes_dup <- choices_recipes %>% filter(preferred == 1) %>%
+  group_by(product_name) %>%
+  filter(n() > 1) %>%
   ungroup()
 
 
