@@ -197,7 +197,8 @@ setup <- function() {
     distinct()
   
   # Initialize a main bus dataframe
-  main_bus <- data.frame()
+  main_bus <- levels_all %>%
+    mutate(produced = NA, consumed = NA, available = NA)
   
   # Create choice sets
   choices_machines <- all_dat_levels_loop %>%
@@ -245,7 +246,6 @@ setup <- function() {
     ungroup()
   
   return(list(
-    levels_all,
     main_bus,
     choices_machines,
     choices_recipes,
