@@ -11,14 +11,36 @@ recipes <- setup_results[[4]]
 rm(setup_results)
 
 #create a function that iterates on levels and produces the number of machines and inputs necessary
-plan_project <- function(data, data_recipes, data_machines, recipe, number, usebus="Y"){
+plan_project <- function(data, data_recipes, data_machines, product, quantity, usebus="Y"){
   
   #reduce the recipe rows by joining with the two choices datasets
+  data_recipes <- data_recipes %>%
+    filter(preferred == 1)
+  
+  data_machines <- data_machines %>%
+    filter(accessible == 1)
+  
+  data_all <- data %>%
+    full_join(data_recipes, by = c("product_name","name")) %>%
+    full_join(data_machines, by = "machine_name")
+  
+  level_max <- data_all %>%
+    filter(product_name == product) %>%
+    select(product_name, recipe_level) %>%
+    distinct(product_name) %>%
+    pull(recipe_level)
   
   #start by iterating downward and making a to do list
-  for (i in max(levels_all$level):1){
+  to_do_list <- data.frame()
+  
+  interested <- c(product)
+  needed <- c(quantity)
+  
+  for (i in level_max:1){
     
-    
+    rows_want <- data_all %>%
+      filter(recipe_level == i & product_name %in% interested) %>%
+      mutate(no_machines = NEED TO FIND A BETTER WAY FOR NEEDED AND INTERESTED)
     
   }
 }
