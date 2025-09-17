@@ -73,7 +73,7 @@ setup <- function() {
         res_temp,
         product_no = j,
         product_name = filtered_recipes[[i]][["results"]][[j]]["name"],
-        product_amount = filtered_recipes[[i]][["results"]][[j]]["amount"],
+        product_amount = as.numeric(filtered_recipes[[i]][["results"]][[j]]["amount"]),
         product_type = filtered_recipes[[i]][["results"]][[j]]["type"]
       )
       
@@ -146,7 +146,8 @@ setup <- function() {
           max(ingredient_level) + 1
         }
       ) %>%
-      ungroup()
+      ungroup() %>%
+      mutate(production_per_machine = crafting_speed * product_amount / recipe_time)
     
     all_dat_levels_loop <- mutate(
       all_dat_levels_loop,

@@ -11,10 +11,14 @@ recipes <- setup_results[[4]]
 rm(setup_results)
 
 #create a function that iterates on levels and produces the number of machines and inputs necessary
-plan_project <- function(recipe,number,usebus="Y"){
+plan_project <- function(data, data_recipes, data_machines, recipe, number, usebus="Y"){
+  
+  #reduce the recipe rows by joining with the two choices datasets
   
   #start by iterating downward and making a to do list
   for (i in max(levels_all$level):1){
+    
+    
     
   }
 }
