@@ -40,7 +40,7 @@ plan_project <- function(data, data_recipes, data_machines, product, quantity, u
     
     rows_want <- data_all %>%
       filter(recipe_level == i & product_name %in% interested) %>%
-      mutate(no_machines = NEED TO FIND A BETTER WAY FOR NEEDED AND INTERESTED)
+      mutate(no_machines = NEED TO FIND A BETTER WAY FOR NEEDED AND INTERESTED, maybe iterate on the number of rows of the previous step, could be a function)
     
   }
 }

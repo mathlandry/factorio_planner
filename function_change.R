@@ -75,3 +75,59 @@ select_machine <- function(data, machines, recipe, production_goal) {
   
   return(input_machines$machine_name)
 }
+
+#function that takes in data_all, product_name and quantity
+recursive_task_table <- function(data, product, quantity){
+  
+  recipe_dat <- data %>%
+    filter(product_name == product) %>%
+    mutate(
+      machines_needed = quantity / production_per_machines,
+      sub_needed = machines_needed * ing_amount
+    )
+  
+  current_level <- recipe_dat %>%
+    select(recipe_level) %>%
+    distinct() %>%
+    pull(recipe_level)
+  
+  for (i in 1:dim(recipe_dat)[1]){
+    
+    temp_dat <- recipe_dat[i,]
+    product_temp <- recipe_dat$ing_name
+    quantity_temp <- recipe_dat$sub_needed
+    
+    recursive_task_table(data, product_temp, quantity_temp)
+  }
+}
+
+#gpt suggestion
+recursive_task_table <- function(data, product, quantity, level = 0) {
+  # Step 1: Get the recipe rows for the product
+  recipe_dat <- data %>%
+    filter(product_name == product) %>%
+    mutate(
+      machines_needed = quantity / production_per_machines,
+      sub_needed = machines_needed * ing_amount,
+      target_product = product,
+      required_quantity = quantity,
+      recipe_level = level
+    )
+  
+  # Step 2: Initialize result with current recipe
+  result <- recipe_dat
+  
+  # Step 3: Recurse for each ingredient
+  for (i in seq_len(nrow(recipe_dat))) {
+    ing <- recipe_dat$ing_name[i]
+    sub_qty <- recipe_dat$sub_needed[i]
+    
+    # Check if this ingredient is itself a product (i.e., has a recipe)
+    if (ing %in% data$product_name) {
+      sub_result <- recursive_task_table(data, ing, sub_qty, level + 1)
+      result <- bind_rows(result, sub_result)
+    }
+  }
+  
+  return(result)
+}
