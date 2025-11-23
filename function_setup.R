@@ -4,7 +4,7 @@ setup <- function() {
   library(readxl)
   
   # Load and parse JSON
-  json_file <- "C:/Users/ml_ml/AppData/Roaming/Factorio/script-output/data-raw-dump.json"
+  json_file <- "C:/Users/Utilisateur/AppData/Roaming/Factorio/script-output/data-raw-dump.json"
   json_data <- fromJSON(file = json_file)
   recipes <- json_data[["recipe"]]
   filtered_recipes <- Filter(
