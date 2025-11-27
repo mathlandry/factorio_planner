@@ -27,7 +27,7 @@ setup <- function() {
         ing_temp,
         ing_no = j,
         ing_name = filtered_recipes[[i]][["ingredients"]][[j]]["name"],
-        ing_amount = filtered_recipes[[i]][["ingredients"]][[j]]["amount"],
+        ing_amount = as.numeric(filtered_recipes[[i]][["ingredients"]][[j]]["amount"]),
         ing_type = filtered_recipes[[i]][["ingredients"]][[j]]["type"]
       )
       

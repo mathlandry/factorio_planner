@@ -102,12 +102,12 @@ recursive_task_table <- function(data, product, quantity){
 }
 
 #gpt suggestion
-recursive_task_table <- function(data, product, quantity, level = 0) {
+recursive_task_table_gpt <- function(data, product, quantity, level = 0) {
   # Step 1: Get the recipe rows for the product
   recipe_dat <- data %>%
     filter(product_name == product) %>%
     mutate(
-      machines_needed = quantity / production_per_machines,
+      machines_needed = quantity / production_per_machine,
       sub_needed = machines_needed * ing_amount,
       target_product = product,
       required_quantity = quantity,
@@ -119,12 +119,12 @@ recursive_task_table <- function(data, product, quantity, level = 0) {
   
   # Step 3: Recurse for each ingredient
   for (i in seq_len(nrow(recipe_dat))) {
-    ing <- recipe_dat$ing_name[i]
+    ing <- recipe_dat$ing_name[[i]]
     sub_qty <- recipe_dat$sub_needed[i]
     
     # Check if this ingredient is itself a product (i.e., has a recipe)
     if (ing %in% data$product_name) {
-      sub_result <- recursive_task_table(data, ing, sub_qty, level + 1)
+      sub_result <- recursive_task_table_gpt(data, ing, sub_qty, level - 1)
       result <- bind_rows(result, sub_result)
     }
   }
