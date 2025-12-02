@@ -28,7 +28,7 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
     pull(recipe_level)
   
   #start by iterating downward and making a to do list
-  return(recursive_task_table_gpt(data_all, product, quantity, level_max))
+  return(recursive_task_table(data_all, product, quantity, level_max))
   # to_do_list <- data.frame()
   # 
   # interested <- c(product)
