@@ -18,7 +18,8 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
     filter(preferred == 1)
   
   data_all <- data_input %>%
-    right_join(data_recipes, by = c("product_name","name"))
+    right_join(data_recipes, by = c("product_name","name")) %>%
+    distinct(name, ing_name, .keep_all = TRUE)
   
   level_max <- data_all %>%
     filter(product_name == product) %>%
@@ -33,13 +34,7 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
   # interested <- c(product)
   # needed <- c(quantity)
   # 
-  # for (i in level_max:1){
-  #   
-  #   rows_want <- data_all %>%
-  #     filter(recipe_level == i & product_name %in% interested) %>%
-  #     mutate(no_machines = NEED TO FIND A BETTER WAY FOR NEEDED AND INTERESTED, maybe iterate on the number of rows of the previous step, could be a function)
-  #   
-  # }
+
 }
 
 #test the function
