@@ -19,7 +19,7 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
   
   data_all <- data_input %>%
     right_join(data_recipes, by = c("product_name","name")) %>%
-    distinct(name, ing_name, .keep_all = TRUE)
+    distinct(name, product_name, ing_name, .keep_all = TRUE)
   
   level_max <- data_all %>%
     filter(product_name == product) %>%
@@ -28,7 +28,7 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
     pull(recipe_level)
   
   #start by iterating downward and making a to do list
-  return(recursive_task_table(data_all, product, quantity, level_max))
+  to_do <- return(recursive_task_table(data_all, product, quantity))
   # to_do_list <- data.frame()
   # 
   # interested <- c(product)
@@ -38,7 +38,7 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
 }
 
 #test the function
-test <- plan_project(recipes, choices_recipes, choices_machines, "engine-unit", 8, usebus="Y")
+test <- plan_project(recipes, choices_recipes, choices_machines, "bulk-inserter", 0.5, usebus="Y")
 
 #then go upward and get info from big table
 #output an in/out table then update the main bus table

@@ -77,33 +77,46 @@ select_machine <- function(data, machines, recipe, production_goal) {
 }
 
 #function that takes in data_all, product_name and quantity
-recursive_task_table <- function(data, product, quantity, level = 0) {
-  # Step 1: Get the recipe rows for the product
+recursive_task_table <- function(data, product, quantity, output = data.frame(
+  ingredient_name = character(),
+  level = integer(),
+  quantity_needed = numeric()
+    )
+  ) {
+  
+  # Get the recipe rows for the product
   recipe_dat <- data %>%
     filter(product_name == product) %>%
     mutate(
       sub_needed = quantity * ing_amount / product_amount,
     )
   
-  # Step 2: Initialize result with current recipe
-  result <- recipe_dat
+  new_row <- data.frame(
+    ingredient_name = product,
+    level = recipe_dat$product_level[1],
+    quantity_needed = quantity
+  )
   
-  # Step 3: Recurse for each ingredient
-  for (i in seq_len(nrow(recipe_dat))) {
-    ing <- recipe_dat$ing_name[[i]]
-    ing_level <- recipe_dat$ingredient_level[[i]]
-    sub_qty <- recipe_dat$sub_needed[i]
-    
-    # Check if this ingredient is itself a product (i.e., has a recipe)
-    if (ing_level > 0) {
-      sub_result <- recursive_task_table(data, ing, sub_qty, level - 1)
-    }
-    else {
-      sub_result <- recipe_dat$ing_name[[i]]
-    }
-    result <- bind_rows(result, sub_result)
+  output <- rbind(output, new_row)
+  
+  #base case
+  if (recipe_dat$product_level[1] == 0) {
+    return(output)
   }
   
-  return(result)
+  #iterate on ingredients
+  else {
+    for (i in seq_len(nrow(recipe_dat))) {
+      
+      ing <- recipe_dat$ing_name[[i]]
+      prod_level <- recipe_dat$ingredient_level[[i]]
+      sub_qty <- recipe_dat$sub_needed[i]
+      
+      output <- recursive_task_table(data, ing, sub_qty, output)
+    
+    }
+  }
+  
+  output
 }
 
