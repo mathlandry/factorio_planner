@@ -10,7 +10,7 @@ setup <- function() {
   filtered_recipes <- Filter(
     function(x) "ingredients" %in% names(x) && is.list(x$ingredients) && length(x$ingredients) > 0,
     recipes
-  )
+    )
   machines <- c(json_data[["assembling-machine"]], json_data[["furnace"]])
   
   # Ingredients loop
@@ -124,7 +124,7 @@ setup <- function() {
   n <- 0
   
   while (any(is.na(all_dat_levels$recipe_level)) & n < 10) {
-    levels_loop[[n + 1]] <- filter(all_dat_levels_loop, product_level == n) %>%
+    levels_loop[[n + 1]] <- filter(all_dat_levels_loop, product_level == n & (name != "scrap-recycling" | product_name == "holmium-ore")) %>%
       mutate(item = product_name, level = product_level) %>%
       select(item, level) %>%
       distinct() %>%
