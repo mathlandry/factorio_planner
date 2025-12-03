@@ -80,8 +80,12 @@ select_machine <- function(data, machines, recipe, production_goal) {
 recursive_task_table <- function(data, product, quantity, output = data.frame(
   ingredient_name = character(),
   level = integer(),
-  quantity_needed = numeric()
-    )
+  quantity_needed = numeric(),
+  recurse_level = integer(),
+  ingredient_no = integer()
+    ),
+  recurseLevel = 0,
+  ingredientNo = 0
   ) {
   
   # Get the recipe rows for the product
@@ -94,7 +98,10 @@ recursive_task_table <- function(data, product, quantity, output = data.frame(
   new_row <- data.frame(
     ingredient_name = product,
     level = recipe_dat$product_level[1],
-    quantity_needed = quantity
+    quantity_needed = quantity,
+    recurse_level = recurseLevel,
+    ingredient_no = ingredientNo
+    
   )
   
   output <- rbind(output, new_row)
@@ -112,7 +119,7 @@ recursive_task_table <- function(data, product, quantity, output = data.frame(
       prod_level <- recipe_dat$ingredient_level[[i]]
       sub_qty <- recipe_dat$sub_needed[i]
       
-      output <- recursive_task_table(data, ing, sub_qty, output)
+      output <- recursive_task_table(data, ing, sub_qty, output, recurseLevel = recurseLevel + 1, ingredientNo = i)
     
     }
   }

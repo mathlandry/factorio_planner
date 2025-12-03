@@ -28,7 +28,19 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
     pull(recipe_level)
   
   #start by iterating downward and making a to do list
-  to_do <- return(recursive_task_table(data_all, product, quantity))
+  to_do <- recursive_task_table(data_all, product, quantity) %>%
+    mutate(
+      ingredient_hierarchy = paste0(strrep("-", 4 * recurse_level), ingredient_name)
+    )
+  
+  to_do_simple <- to_do %>%
+    group_by(ingredient_name,level) %>%
+    summarise(quantity_needed = sum(quantity_needed, na.rm = TRUE),
+        .groups = "drop") %>%
+    arrange(desc(level))
+  
+  
+  return(list(to_do,to_do_simple))
   # to_do_list <- data.frame()
   # 
   # interested <- c(product)
@@ -39,7 +51,8 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
 
 #test the function
 test <- plan_project(recipes, choices_recipes, choices_machines, "bulk-inserter", 0.5, usebus="Y")
-
+test1 <- test[[1]]
+test2 <- test[[2]]
 #then go upward and get info from big table
 #output an in/out table then update the main bus table
 #create an excel table of level recipes to add to big table (uranium mining may be an issue)
