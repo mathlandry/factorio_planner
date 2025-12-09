@@ -26,9 +26,9 @@ setup <- function() {
       ing_temp <- mutate(
         ing_temp,
         ing_no = j,
-        ing_name = filtered_recipes[[i]][["ingredients"]][[j]]["name"],
-        ing_amount = as.numeric(filtered_recipes[[i]][["ingredients"]][[j]]["amount"]),
-        ing_type = filtered_recipes[[i]][["ingredients"]][[j]]["type"]
+        ing_name = filtered_recipes[[i]][["ingredients"]][[j]][["name"]],
+        ing_amount = as.numeric(filtered_recipes[[i]][["ingredients"]][[j]][["amount"]]),
+        ing_type = filtered_recipes[[i]][["ingredients"]][[j]][["type"]]
       )
       
       rec_temp <- rbind(rec_temp, ing_temp)
@@ -72,9 +72,9 @@ setup <- function() {
       res_temp <- mutate(
         res_temp,
         product_no = j,
-        product_name = filtered_recipes[[i]][["results"]][[j]]["name"],
-        product_amount = as.numeric(filtered_recipes[[i]][["results"]][[j]]["amount"]),
-        product_type = filtered_recipes[[i]][["results"]][[j]]["type"]
+        product_name = filtered_recipes[[i]][["results"]][[j]][["name"]],
+        product_amount = as.numeric(filtered_recipes[[i]][["results"]][[j]][["amount"]]),
+        product_type = filtered_recipes[[i]][["results"]][[j]][["type"]]
       )
       
       rec_temp <- rbind(rec_temp, res_temp)
