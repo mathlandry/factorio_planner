@@ -59,21 +59,25 @@ select_machine <- function(data, machines, recipe, production_goal) {
   
   machines_dat <- machines %>% 
     filter(accessible == 1) %>% 
-    select(machine_name)
+    select(machine_name) %>%
+    distinct()
   
-  input_machines <- machines_dat %>% 
+  input_machines <- input %>% 
     left_join(machines_dat, by = "machine_name") %>%
     mutate(
       number_required = production_goal / crafting_speed,
       whole = case_when(
         production_goal %% crafting_speed > 0 ~ 0,
         TRUE ~ 1
+      ),
+      electric = case_when(
+        grepl("electric", machine_name) ~ 1,
+        TRUE ~ 0
       )
     ) %>%
-    filter(whole == max(whole)) %>%
-    filter(crafting_speed == max(crafting_speed))
-  
-  return(input_machines$machine_name)
+    arrange(desc(whole), number_required, desc(electric))
+
+  return(input_machines$machine_name[1])
 }
 
 #function that takes in data_all, product_name and quantity
