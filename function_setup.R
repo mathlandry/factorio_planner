@@ -197,6 +197,11 @@ setup <- function() {
     select(ing_name) %>%
     distinct()
   
+  if (nrow(unresolved_ings) > 0) {
+    cat("⚠️ There are", nrow(unresolved_ings), "ingredients still unresolved")
+    print(unresolved_ings)
+  }
+  
   # Initialize a main bus dataframe
   main_bus <- levels_all %>%
     mutate(produced = NA, consumed = NA, available = NA)
@@ -221,30 +226,42 @@ setup <- function() {
     mutate(choices = n()) %>%
     ungroup() %>%
     mutate(preferred = if_else(product_name == name | choices == 1, 1, 0)) %>%
-    mutate(preferred = if_else(
-      name %in% c(
-        "uranium-processing", "solid-fuel-from-petroleum-gas", "oxide-asteroid-crushing",
-        "advanced-oil-processing", "fluoroketone-cooling", "fluoroketone", "metallic-asteroid-crushing",
-        "carbonic-asteroid-crushing", "nutrients-from-fish", "fish-breeding", "iron-bacteria"
-      ), 1, preferred
-    )) %>%
-    mutate(preferred = case_when(
-      product_name == "iron-ore" & name == "iron-ore" ~ 1,
-      product_name == "carbon"   & name == "carbon"   ~ 1,
-      product_name == "spoilage" & name == "iron-bacteria" ~ 1,
-      TRUE ~ preferred
-    ))
+    #add exceptions
+    change_recipe("carbonic-asteroid-chunk", "carbonic-asteroid-crushing") %>%
+    change_recipe("fluoroketone-cold", "fluoroketone-cooling") %>%
+    change_recipe("fluoroketone-hot", "fluoroketone") %>%
+    change_recipe("heavy-oil", "advanced-oil-processing") %>%
+    change_recipe("ice", "oxide-asteroid-crushing") %>%
+    change_recipe("light-oil", "advanced-oil-processing") %>%
+    change_recipe("metallic-asteroid-chunk", "metallic-asteroid-crushing") %>%
+    change_recipe("nutrients", "nutrients-from-fish") %>%
+    change_recipe("oxide-asteroid-chunk", "oxide-asteroid-crushing") %>%
+    change_recipe("petroleum-gas", "advanced-oil-processing") %>%
+    change_recipe("raw-fish", "fish-breeding") %>%
+    change_recipe("solid-fuel", "solid-fuel-from-petroleum-gas") %>%
+    change_recipe("spoilage", "iron-bacteria") %>%
+    change_recipe("uranium-235", "kovarex-enrichment-process") %>%
+    change_recipe("uranium-238", "kovarex-enrichment-process")
+  
+  choices_recipes_dup <- choices_recipes %>%
+    group_by(product_name, preferred) %>%
+    filter(n() > 1 & preferred == 1) %>%
+    ungroup()
+  
+  if (nrow(choices_recipes_dup) > 0) {
+    cat("⚠️ There are", nrow(choices_recipes_dup), "duplicate recipe choices")
+    print(choices_recipes_dup)
+  }
   
   choices_recipes_remaining <- choices_recipes %>%
     group_by(product_name) %>%
     filter(all(preferred == 0)) %>%
     ungroup()
   
-  choices_recipes_dup <- choices_recipes %>%
-    filter(preferred == 1) %>%
-    group_by(product_name) %>%
-    filter(n() > 1) %>%
-    ungroup()
+  if (nrow(choices_recipes_remaining) > 0) {
+    cat("⚠️ There are", nrow(choices_recipes_remaining), "products without a chosen recipe")
+    print(choices_recipes_remaining)
+  }
   
   return(list(
     main_bus,
