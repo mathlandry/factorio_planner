@@ -54,8 +54,10 @@ update_bus <- function(data, item_step, prod_step, cons_step) {
 select_machine <- function(data, machines, recipe, production_goal) {
   input <- data %>% 
     filter(name == recipe) %>% 
-    select(name, machine_name, crafting_speed) %>%
-    distinct()
+    select(name, machine_name, production_per_machine) %>%
+    distinct(machine_name, .keep_all = TRUE)
+  
+  stopifnot(length(unique(input$machine_name)) == nrow(input))
   
   machines_dat <- machines %>% 
     filter(accessible == 1) %>% 
@@ -65,9 +67,9 @@ select_machine <- function(data, machines, recipe, production_goal) {
   input_machines <- input %>% 
     left_join(machines_dat, by = "machine_name") %>%
     mutate(
-      number_required = production_goal / crafting_speed,
+      number_required = production_goal / production_per_machine,
       whole = case_when(
-        production_goal %% crafting_speed > 0 ~ 0,
+        production_goal %% production_per_machine > 0 ~ 0,
         TRUE ~ 1
       ),
       electric = case_when(
