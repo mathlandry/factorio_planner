@@ -263,10 +263,42 @@ setup <- function() {
     print(choices_recipes_remaining)
   }
   
+  outputs <- final_dat %>%
+    select(name, recipe_no, recipe_level, product_no, product_name, product_amount) %>%
+    distinct() %>%
+    mutate(
+      produced = product_amount,
+      item = product_name,
+      consumed = NA
+    ) %>%
+    select(name, recipe_no, recipe_level, item, produced, consumed)
+  
+  
+  inputs <- final_dat %>%
+    select(name, recipe_no, recipe_level, ing_no, ing_name, ing_amount) %>%
+    distinct() %>%
+    mutate(
+      consumed = ing_amount,
+      item = ing_name,
+      produced = NA
+    ) %>%
+    select(name, recipe_no, recipe_level, item, produced, consumed)
+  
+  consumed_produced <- rbind(outputs, inputs) %>%
+    filter(!is.na(item)) %>%
+    group_by(name, recipe_no, recipe_level, item) %>%
+    summarise(
+      consumed = na.omit(consumed)[1],
+      produced = na.omit(produced)[1],
+      .groups = "drop"
+    ) %>%
+    arrange(recipe_level, name)
+  
   return(list(
     main_bus,
     choices_machines,
     choices_recipes,
-    final_dat
+    final_dat,
+    consumed_produced
   ))
 }
