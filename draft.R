@@ -8,11 +8,14 @@ main_bus <- setup_results[[1]]
 choices_machines <- setup_results[[2]]
 choices_recipes <- setup_results[[3]]
 recipes <- setup_results[[4]]
+consumed_produced <- setup_results[[5]]
 
 rm(setup_results)
 
+ 
+
 #create a function that iterates on levels and produces the number of machines and inputs necessary
-plan_project <- function(data_input, data_recipes, data_machines, product, quantity, usebus="Y"){
+plan_project <- function(data_input = recipes, data_recipes = choices_recipes, data_machines = choices_machines, data_inout = consumed_produced, product, quantity, usebus="Y"){
   
   #reduce the recipe rows by joining with the two choices datasets
   data_recipes <- data_recipes %>%
@@ -50,8 +53,10 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
     select(ingredient_name, level, quantity_needed, desc_col, name, recipe_no, product_no, product_name, product_amount, recipe_time, machine_name, crafting_speed, production_per_machine) %>%
     distinct() %>%
     mutate(
-      number_machines = quantity_needed / production_per_machine
-    )
+      number_machines = if_else(
+        product_name == ingredient_name,
+        quantity_needed / production_per_machine, NA
+    ))
   
   plan_detailed <- to_do %>%
     mutate(desc_col = n():1) %>%
@@ -100,24 +105,44 @@ plan_project <- function(data_input, data_recipes, data_machines, product, quant
         machine_name == chosen | ID != ident
       ) %>%
       mutate(
-        number_machines = quantity_needed / production_per_machine
-      )
+        number_machines = if_else(
+          product_name == ingredient_name,
+          quantity_needed / production_per_machine, NA
+      ))
   }
   
-  return(list(to_do, to_do_simple, plan_detailed_final, plan_simple_final))
+  #get the total ins and outs from the simple plan
+  planned_consumed_produced <- plan_simple_final %>%
+    filter(!is.na(number_machines)) %>%
+    left_join(data_inout, by = c("name","recipe_no")) %>%
+    mutate(
+      consumed_sum = round(number_machines*consumed*crafting_speed/recipe_time,1),
+      produced_sum = round(number_machines*produced*crafting_speed/recipe_time,1),
+      diff = coalesce(produced_sum,0) - coalesce(consumed_sum,0)
+    ) %>%
+    select(item, consumed_sum, produced_sum, diff) %>%
+    group_by(item) %>%
+    summarise(consumed_sum = sum(consumed_sum, na.rm = TRUE),
+              produced_sum = sum(produced_sum, na.rm = TRUE),
+              diff = sum(diff, na.rm = TRUE),
+              .groups = "drop")
+  
+  return(list(to_do, to_do_simple, plan_detailed_final, plan_simple_final, planned_consumed_produced))
 
+  ##result from planned_consumed_produced needs adjustment
   #output an in/out table then update the main bus table
   #implement the bus option
   #implement a parameter to prioritize number of machines over whole numbers
 }
 
 #test the function
-test <- plan_project(recipes, choices_recipes, choices_machines, "bulk-inserter", 14, usebus="Y")
-test1 <- test[[1]]
-test2 <- test[[2]]
-test3 <- test[[3]]
-test4 <- test[[4]]
+#debugonce(plan_project)
+test <- plan_project(product = "bulk-inserter", quantity = 14, usebus="Y")
+to_do <- test[[1]]
+to_do_simple <- test[[2]]
+plan_detailed_final <- test[[3]]
+plan_simple_final <- test[[4]]
+planned_consumed_produced <- test[[5]]
 #create an excel table of level recipes to add to big table (uranium mining may be an issue)
 
 
-select_machine(recipes, choices_machines, "inserter", 9)
