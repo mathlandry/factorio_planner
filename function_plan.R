@@ -26,6 +26,10 @@ plan_project <- function(
     distinct(product_name, recipe_level) %>%
     pull(recipe_level)
 
+  if (length(level_max) == 0 || is.na(level_max)) {
+    warning(paste0("No recipe_level found for product '", product, "'"))
+  }
+
   # start by iterating downward and making a to do list
   to_do <- recursive_task_table(
     data_curated,
@@ -129,8 +133,12 @@ plan_project <- function(
     ) %>%
     distinct() %>%
     mutate(
-      ID = paste0(name, desc_col),
-      number_machines = quantity_needed / production_per_machine
+      ID = paste0(name, "_", desc_col),
+      number_machines = if_else(
+        product_name == ingredient_name,
+        quantity_needed / production_per_machine,
+        NA
+      )
     )
 
   # iterate on recipes in plan_simple then choose with select_machines()
@@ -138,10 +146,14 @@ plan_project <- function(
 
   for (recipe in na.omit(unique(plan_simple$name))) {
 
-    needed <- plan_simple %>%
-      filter(name == recipe) %>%
+    needed <- plan_simple_final %>%
+      filter(name == recipe, product_name == ingredient_name) %>%
       pull(quantity_needed) %>%
       first()
+
+    if (is.na(needed) || length(needed) == 0) {
+      stop(paste0("plan_project: needed is NA for recipe '", recipe, "'"))
+    }
 
     chosen <- select_machine(
       plan_simple_final,
@@ -150,6 +162,10 @@ plan_project <- function(
       needed,
       priority = priority
     )
+
+    if (sum(plan_simple_final$name == recipe & plan_simple_final$machine_name == chosen, na.rm = TRUE) == 0) {
+      stop(paste0("plan_project: chosen machine not present for recipe '", recipe, "': ", chosen))
+    }
 
     plan_simple_final <- plan_simple_final %>%
       filter(
@@ -166,9 +182,13 @@ plan_project <- function(
       filter(ID == ident)
 
     needed <- rows %>%
-      filter(ID == ident) %>%
+      filter(product_name == ingredient_name) %>%
       pull(quantity_needed) %>%
       first()
+
+    if (is.na(needed) || length(needed) == 0) {
+      stop(paste0("plan_project: needed is NA for ID '", ident, "'"))
+    }
 
     recipe <- rows %>%
       filter(ID == ident) %>%
@@ -182,6 +202,10 @@ plan_project <- function(
       needed,
       priority = priority
     )
+
+    if (sum(plan_detailed_final$ID == ident & plan_detailed_final$machine_name == chosen, na.rm = TRUE) == 0) {
+      stop(paste0("plan_project: chosen machine not present for ID '", ident, "': ", chosen))
+    }
 
     plan_detailed_final <- plan_detailed_final %>%
       filter(

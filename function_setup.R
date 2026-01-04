@@ -175,11 +175,11 @@ setup <- function() {
     rbind(basic)
   
   # Level calculation loop
-  levels_loop <- c()
+  levels_loop <- list()
   all_dat_levels_loop <- all_dat_levels
   n <- 0
   
-  while (any(is.na(all_dat_levels$recipe_level)) & n < 10) {
+  while (any(is.na(all_dat_levels_loop$recipe_level)) & n < 10) {
     
     levels_loop[[n + 1]] <- filter(
       all_dat_levels_loop,
@@ -193,6 +193,14 @@ setup <- function() {
       select(item, level) %>%
       distinct() %>%
       as.data.frame()
+    
+    if (nrow(levels_loop[[n + 1]]) == 0) {
+      warning(paste0(
+        "No items found at product_level == ", n,
+        ". Stopping level resolution early."
+      ))
+      break
+    }
     
     all_dat_levels_loop <- left_join(
       all_dat_levels_loop,
@@ -224,7 +232,7 @@ setup <- function() {
       ungroup() %>%
       mutate(
         production_per_machine =
-          crafting_speed * product_amount / recipe_time
+          if_else(recipe_time <= 0, NA_real_, crafting_speed * product_amount / recipe_time)
       )
     
     all_dat_levels_loop <- mutate(
@@ -240,17 +248,7 @@ setup <- function() {
   final_dat <- all_dat_levels_loop
   
   # Compile all level items
-  levels_all <- bind_rows(
-    levels_loop[[1]],
-    levels_loop[[2]],
-    levels_loop[[3]],
-    levels_loop[[4]],
-    levels_loop[[5]],
-    levels_loop[[6]],
-    levels_loop[[7]],
-    levels_loop[[8]],
-    levels_loop[[9]]
-  ) %>%
+  levels_all <- bind_rows(levels_loop) %>%
     distinct() %>%
     arrange(level)
   
@@ -422,8 +420,8 @@ setup <- function() {
     filter(!is.na(item)) %>%
     group_by(name, recipe_no, recipe_level, item) %>%
     summarise(
-      consumed = na.omit(consumed)[1],
-      produced = na.omit(produced)[1],
+      consumed = if (all(is.na(consumed))) NA_real_ else na.omit(consumed)[1],
+      produced = if (all(is.na(produced))) NA_real_ else na.omit(produced)[1],
       .groups  = "drop"
     ) %>%
     arrange(recipe_level, name)
