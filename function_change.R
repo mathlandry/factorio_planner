@@ -297,5 +297,4 @@ plan_project <- function(data_input = recipes, data_recipes = choices_recipes, d
   
   return(list(to_do, to_do_simple, plan_detailed_final, plan_simple_final, planned_consumed_produced, main_bus))
   
-  #implement a parameter to prioritize number of machines over whole numbers
 }
