@@ -15,7 +15,7 @@ rm(setup_results)
  
 
 #create a function that iterates on levels and produces the number of machines and inputs necessary
-plan_project <- function(data_input = recipes, data_recipes = choices_recipes, data_machines = choices_machines, data_inout = consumed_produced, product, quantity, usebus="Y"){
+plan_project <- function(data_input = recipes, data_recipes = choices_recipes, data_machines = choices_machines, data_inout = consumed_produced, data_main_bus = main_bus, product, quantity, usebus="Y"){
   
   #reduce the recipe rows by joining with the two choices datasets
   data_recipes <- data_recipes %>%
@@ -127,10 +127,32 @@ plan_project <- function(data_input = recipes, data_recipes = choices_recipes, d
               diff = sum(diff, na.rm = TRUE),
               .groups = "drop")
   
-  return(list(to_do, to_do_simple, plan_detailed_final, plan_simple_final, planned_consumed_produced))
+  #update the main bus
+  changes <- planned_consumed_produced %>%
+    filter(diff != 0) %>%
+    select(item, diff)
+  
+  main_bus <- main_bus %>%
+    left_join(changes, by = "item") %>%
+    mutate(
+      produced = if_else(
+        diff > 0,
+        coalesce(produced, 0) + diff, produced
+      ),
+      consumed = if_else(
+        diff < 0,
+        coalesce(consumed, 0) - diff, consumed
+      ),
+      available = if_else(
+        diff != 0,
+        coalesce(produced, 0) - coalesce(consumed, 0), available
+      )
+    ) %>%
+    arrange(desc(available)) %>%
+    select(-diff)
+  
+  return(list(to_do, to_do_simple, plan_detailed_final, plan_simple_final, planned_consumed_produced, main_bus))
 
-  ##result from planned_consumed_produced needs adjustment
-  #output an in/out table then update the main bus table
   #implement the bus option
   #implement a parameter to prioritize number of machines over whole numbers
 }
@@ -143,6 +165,7 @@ to_do_simple <- test[[2]]
 plan_detailed_final <- test[[3]]
 plan_simple_final <- test[[4]]
 planned_consumed_produced <- test[[5]]
+main_bus <- test[[6]]
 #create an excel table of level recipes to add to big table (uranium mining may be an issue)
 
 
