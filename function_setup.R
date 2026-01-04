@@ -317,7 +317,12 @@ setup <- function() {
           "oil-refinery",
           "rocket-silo",
           "steel-furnace",
-          "stone-furnace"
+          "stone-furnace",
+          "asteroid-collector",
+          "electric-mining-drill",
+          "nuclear-reactor",
+          "offshore-pump",
+          "pumpjack"
         ),
         1,
         0
