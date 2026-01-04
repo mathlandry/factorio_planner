@@ -1,4 +1,4 @@
-#create a function that iterates on levels and produces the number of machines and inputs necessary
+# create a function that iterates on levels and produces the number of machines and inputs necessary
 plan_project <- function(
     data_input = recipes,
     data_recipes = choices_recipes,
@@ -9,24 +9,24 @@ plan_project <- function(
     usebus = "N",
     priority = "whole"
 ) {
-  
-  #reduce the recipe rows by joining with the two choices datasets
+
+  # reduce the recipe rows by joining with the two choices datasets
   data_recipes <- data_recipes %>%
     filter(preferred == 1)
-  
+
   data_pre_curated <- data_input %>%
     right_join(data_recipes, by = c("product_name", "name"))
-  
+
   data_curated <- data_pre_curated %>%
     distinct(name, product_name, ing_name, .keep_all = TRUE)
-  
+
   level_max <- data_curated %>%
     filter(product_name == product) %>%
     select(product_name, recipe_level) %>%
     distinct(product_name, recipe_level) %>%
     pull(recipe_level)
-  
-  #start by iterating downward and making a to do list
+
+  # start by iterating downward and making a to do list
   to_do <- recursive_task_table(
     data_curated,
     product,
@@ -36,12 +36,12 @@ plan_project <- function(
       ingredient_hierarchy =
         paste0(strrep("-", 4 * recurse_level), ingredient_name)
     )
-  
+
   if (usebus == "Y") {
     to_do <- to_do %>%
       filter(recurse_level < 1)
   }
-  
+
   to_do_simple <- to_do %>%
     group_by(ingredient_name, level) %>%
     summarise(
@@ -49,7 +49,7 @@ plan_project <- function(
       .groups = "drop"
     ) %>%
     arrange(desc(level))
-  
+
   plan_simple <- to_do_simple %>%
     mutate(desc_col = n():1) %>%
     left_join(
@@ -87,7 +87,7 @@ plan_project <- function(
         NA
       )
     )
-  
+
   plan_detailed <- to_do %>%
     mutate(desc_col = n():1) %>%
     left_join(
@@ -132,17 +132,17 @@ plan_project <- function(
       ID = paste0(name, desc_col),
       number_machines = quantity_needed / production_per_machine
     )
-  
-  #iterate on recipes in plan_simple then choose with select_machines()
+
+  # iterate on recipes in plan_simple then choose with select_machines()
   plan_simple_final <- plan_simple
-  
+
   for (recipe in na.omit(unique(plan_simple$name))) {
-    
+
     needed <- plan_simple %>%
       filter(name == recipe) %>%
       pull(quantity_needed) %>%
       first()
-    
+
     chosen <- select_machine(
       plan_simple_final,
       data_machines,
@@ -150,31 +150,31 @@ plan_project <- function(
       needed,
       priority = priority
     )
-    
+
     plan_simple_final <- plan_simple_final %>%
       filter(
         machine_name == chosen | name != recipe
       )
   }
-  
-  #do the same for the detailed plan
+
+  # do the same for the detailed plan
   plan_detailed_final <- plan_detailed
-  
+
   for (ident in na.omit(unique(plan_detailed$ID))) {
-    
+
     rows <- plan_detailed_final %>%
       filter(ID == ident)
-    
+
     needed <- rows %>%
       filter(ID == ident) %>%
       pull(quantity_needed) %>%
       first()
-    
+
     recipe <- rows %>%
       filter(ID == ident) %>%
       pull(name) %>%
       first()
-    
+
     chosen <- select_machine(
       rows,
       data_machines,
@@ -182,7 +182,7 @@ plan_project <- function(
       needed,
       priority = priority
     )
-    
+
     plan_detailed_final <- plan_detailed_final %>%
       filter(
         machine_name == chosen | ID != ident
@@ -195,8 +195,8 @@ plan_project <- function(
         )
       )
   }
-  
-  #get the total ins and outs from the simple plan
+
+  # get the total ins and outs from the simple plan
   planned_consumed_produced <- plan_simple_final %>%
     filter(!is.na(number_machines)) %>%
     left_join(data_inout, by = c("name", "recipe_no")) %>%
@@ -216,12 +216,12 @@ plan_project <- function(
       diff = sum(diff, na.rm = TRUE),
       .groups = "drop"
     )
-  
-  #update the main bus
+
+  # update the main bus
   changes <- planned_consumed_produced %>%
     filter(diff != 0) %>%
     select(item, diff)
-  
+
   main_bus <- main_bus %>%
     left_join(changes, by = "item") %>%
     mutate(
@@ -243,7 +243,7 @@ plan_project <- function(
     ) %>%
     arrange(desc(available)) %>%
     select(-diff)
-  
+
   return(
     list(
       to_do,
