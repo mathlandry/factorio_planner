@@ -51,7 +51,7 @@ update_bus <- function(data, item_step, prod_step, cons_step) {
   return(output)
 }
 
-select_machine <- function(data, machines, recipe, production_goal) {
+select_machine <- function(data, machines, recipe, production_goal, priority = "whole") {
   input <- data %>% 
     filter(name == recipe) %>% 
     select(name, machine_name, production_per_machine) %>%
@@ -64,20 +64,40 @@ select_machine <- function(data, machines, recipe, production_goal) {
     select(machine_name) %>%
     distinct()
   
-  input_machines <- input %>% 
-    left_join(machines_dat, by = "machine_name") %>%
-    mutate(
-      number_required = production_goal / production_per_machine,
-      whole = case_when(
-        production_goal %% production_per_machine > 0 ~ 0,
-        TRUE ~ 1
-      ),
-      electric = case_when(
-        grepl("electric", machine_name) ~ 1,
-        TRUE ~ 0
-      )
-    ) %>%
-    arrange(desc(whole), number_required, desc(electric))
+  if (priority == "whole"){
+    input_machines <- input %>% 
+      inner_join(machines_dat, by = "machine_name") %>%
+      mutate(
+        number_required = production_goal / production_per_machine,
+        whole = case_when(
+          production_goal %% production_per_machine > 0 ~ 0,
+          TRUE ~ 1
+        ),
+        electric = case_when(
+          grepl("electric", machine_name) ~ 1,
+          TRUE ~ 0
+        )
+      ) %>%
+      arrange(desc(whole), number_required, desc(electric))
+  }
+
+  else if (priority == "speed"){
+    input_machines <- input %>% 
+      inner_join(machines_dat, by = "machine_name") %>%
+      mutate(
+        number_required = production_goal / production_per_machine,
+        whole = case_when(
+          production_goal %% production_per_machine > 0 ~ 0,
+          TRUE ~ 1
+        ),
+        electric = case_when(
+          grepl("electric", machine_name) ~ 1,
+          TRUE ~ 0
+        )
+      ) %>%
+      arrange(number_required, desc(whole), desc(electric))
+  }
+
 
   return(input_machines$machine_name[1])
 }
@@ -134,7 +154,7 @@ recursive_task_table <- function(data, product, quantity, output = data.frame(
 }
 
 #create a function that iterates on levels and produces the number of machines and inputs necessary
-plan_project <- function(data_input = recipes, data_recipes = choices_recipes, data_machines = choices_machines, data_inout = consumed_produced, data_main_bus = main_bus, product, quantity, usebus="N"){
+plan_project <- function(data_input = recipes, data_recipes = choices_recipes, data_machines = choices_machines, data_inout = consumed_produced, data_main_bus = main_bus, product, quantity, usebus="N", priority = "whole"){
   
   #reduce the recipe rows by joining with the two choices datasets
   data_recipes <- data_recipes %>%
@@ -203,7 +223,7 @@ plan_project <- function(data_input = recipes, data_recipes = choices_recipes, d
       filter(name == recipe) %>%
       pull(product_amount) %>%
       first()
-    chosen <- select_machine(plan_simple_final, data_machines, recipe, needed)
+    chosen <- select_machine(plan_simple_final, data_machines, recipe, needed, priority = priority)
     plan_simple_final <- plan_simple_final %>% 
       filter(
         machine_name == chosen | name != recipe
@@ -223,7 +243,7 @@ plan_project <- function(data_input = recipes, data_recipes = choices_recipes, d
       filter(ID == ident) %>%
       pull(name) %>%
       first()
-    chosen <- select_machine(rows, data_machines, recipe, needed)
+    chosen <- select_machine(rows, data_machines, recipe, needed, priority = priority)
     plan_detailed_final <- plan_detailed_final %>% 
       filter(
         machine_name == chosen | ID != ident
