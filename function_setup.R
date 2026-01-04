@@ -1,4 +1,5 @@
 setup <- function() {
+  
   library("rjson")
   library(dplyr)
   library(readxl)
@@ -6,29 +7,44 @@ setup <- function() {
   # Load and parse JSON
   json_file <- "C:/Users/Utilisateur/AppData/Roaming/Factorio/script-output/data-raw-dump.json"
   json_data <- fromJSON(file = json_file)
+  
   recipes <- json_data[["recipe"]]
+  
   filtered_recipes <- Filter(
-    function(x) "ingredients" %in% names(x) && is.list(x$ingredients) && length(x$ingredients) > 0,
+    function(x) {
+      "ingredients" %in% names(x) &&
+        is.list(x$ingredients) &&
+        length(x$ingredients) > 0
+    },
     recipes
-    )
-  machines <- c(json_data[["assembling-machine"]], json_data[["furnace"]])
+  )
+  
+  machines <- c(
+    json_data[["assembling-machine"]],
+    json_data[["furnace"]]
+  )
   
   # Ingredients loop
   ingredients_dat <- data.frame()
+  
   for (i in 1:length(filtered_recipes)) {
+    
     rec_temp <- data.frame()
     recipe_name <- names(filtered_recipes[i])
     
     for (j in 1:length(filtered_recipes[[i]][["ingredients"]])) {
+      
       ing_temp <- data.frame()
       ing_temp[1, "name"] <- recipe_name
       
       ing_temp <- mutate(
         ing_temp,
-        ing_no = j,
-        ing_name = filtered_recipes[[i]][["ingredients"]][[j]][["name"]],
-        ing_amount = as.numeric(filtered_recipes[[i]][["ingredients"]][[j]][["amount"]]),
-        ing_type = filtered_recipes[[i]][["ingredients"]][[j]][["type"]]
+        ing_no     = j,
+        ing_name   = filtered_recipes[[i]][["ingredients"]][[j]][["name"]],
+        ing_amount = as.numeric(
+          filtered_recipes[[i]][["ingredients"]][[j]][["amount"]]
+        ),
+        ing_type   = filtered_recipes[[i]][["ingredients"]][[j]][["type"]]
       )
       
       rec_temp <- rbind(rec_temp, ing_temp)
@@ -36,15 +52,19 @@ setup <- function() {
     
     ingredients_dat <- rbind(ingredients_dat, rec_temp)
   }
+  
   rm(i, j, recipe_name, ing_temp, rec_temp)
   
   # Results loop
   results_dat <- data.frame()
+  
   for (i in 1:length(filtered_recipes)) {
+    
     rec_temp <- data.frame()
     recipe_name <- names(filtered_recipes[i])
     
     for (j in 1:length(filtered_recipes[[i]][["results"]])) {
+      
       res_temp <- data.frame()
       res_temp[1, "name"] <- recipe_name
       res_temp[1, "recipe_no"] <- i
@@ -67,14 +87,22 @@ setup <- function() {
         0.5
       }
       
-      res_temp[1, "ByproductsFL"] <- if (length(filtered_recipes[[i]][["results"]]) > 1) "Y" else "N"
+      res_temp[1, "ByproductsFL"] <- if (
+        length(filtered_recipes[[i]][["results"]]) > 1
+      ) {
+        "Y"
+      } else {
+        "N"
+      }
       
       res_temp <- mutate(
         res_temp,
-        product_no = j,
-        product_name = filtered_recipes[[i]][["results"]][[j]][["name"]],
-        product_amount = as.numeric(filtered_recipes[[i]][["results"]][[j]][["amount"]]),
-        product_type = filtered_recipes[[i]][["results"]][[j]][["type"]]
+        product_no     = j,
+        product_name   = filtered_recipes[[i]][["results"]][[j]][["name"]],
+        product_amount = as.numeric(
+          filtered_recipes[[i]][["results"]][[j]][["amount"]]
+        ),
+        product_type   = filtered_recipes[[i]][["results"]][[j]][["type"]]
       )
       
       rec_temp <- rbind(rec_temp, res_temp)
@@ -82,15 +110,19 @@ setup <- function() {
     
     results_dat <- rbind(results_dat, rec_temp)
   }
+  
   rm(i, j, recipe_name, res_temp, rec_temp)
   
   # Machines loop
   machines_dat <- data.frame()
+  
   for (i in 1:length(machines)) {
+    
     mac_temp <- data.frame()
     machine_name <- names(machines[i])
     
     for (j in 1:length(machines[[i]][["crafting_categories"]])) {
+      
       cra_temp <- data.frame()
       cra_temp[1, "machine_name"] <- machine_name
       cra_temp[1, "recipe_category"] <- machines[[i]][["crafting_categories"]][[j]]
@@ -101,21 +133,45 @@ setup <- function() {
     
     machines_dat <- rbind(machines_dat, mac_temp)
   }
+  
   rm(i, j, machine_name, cra_temp, mac_temp)
   
   # Combine all data
-  all_dat <- full_join(results_dat, ingredients_dat, by = "name", relationship = "many-to-many") %>%
-    left_join(machines_dat, by = "recipe_category", relationship = "many-to-many") %>%
-    arrange(recipe_type, recipe_category, recipe_no, product_no, machine_name, ing_no)
+  all_dat <- full_join(
+    results_dat,
+    ingredients_dat,
+    by = "name",
+    relationship = "many-to-many"
+  ) %>%
+    left_join(
+      machines_dat,
+      by = "recipe_category",
+      relationship = "many-to-many"
+    ) %>%
+    arrange(
+      recipe_type,
+      recipe_category,
+      recipe_no,
+      product_no,
+      machine_name,
+      ing_no
+    )
   
   all_dat_levels <- filter(all_dat, recipe_category != "recycling") %>%
-    mutate(machine_name = if_else(name == "rocket-part", "rocket-silo", machine_name)) %>%
-    mutate(crafting_speed = if_else(name == "rocket-part", 1, crafting_speed))
+    mutate(
+      machine_name   = if_else(name == "rocket-part", "rocket-silo", machine_name),
+      crafting_speed = if_else(name == "rocket-part", 1, crafting_speed)
+    )
   
   # Add custom-made level 0 recipes
   basic <- read_excel("base_resources.xlsx")
+  
   all_dat_levels <- all_dat_levels %>%
-    mutate(ingredient_level = NA, product_level = NA, recipe_level = NA) %>%
+    mutate(
+      ingredient_level = NA,
+      product_level    = NA,
+      recipe_level     = NA
+    ) %>%
     rbind(basic)
   
   # Level calculation loop
@@ -124,17 +180,36 @@ setup <- function() {
   n <- 0
   
   while (any(is.na(all_dat_levels$recipe_level)) & n < 10) {
-    levels_loop[[n + 1]] <- filter(all_dat_levels_loop, product_level == n & (name != "scrap-recycling" | product_name == "holmium-ore")) %>%
-      mutate(item = product_name, level = product_level) %>%
+    
+    levels_loop[[n + 1]] <- filter(
+      all_dat_levels_loop,
+      product_level == n &
+        (name != "scrap-recycling" | product_name == "holmium-ore")
+    ) %>%
+      mutate(
+        item  = product_name,
+        level = product_level
+      ) %>%
       select(item, level) %>%
       distinct() %>%
       as.data.frame()
     
-    all_dat_levels_loop <- left_join(all_dat_levels_loop, levels_loop[[n + 1]], by = c("ing_name" = "item")) %>%
-      mutate(ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level)) %>%
+    all_dat_levels_loop <- left_join(
+      all_dat_levels_loop,
+      levels_loop[[n + 1]],
+      by = c("ing_name" = "item")
+    ) %>%
+      mutate(
+        ingredient_level = if_else(is.na(ingredient_level), level, ingredient_level)
+      ) %>%
       select(-level) %>%
-      left_join(levels_loop[[n + 1]], by = c("product_name" = "item")) %>%
-      mutate(product_level = if_else(is.na(product_level), level, product_level)) %>%
+      left_join(
+        levels_loop[[n + 1]],
+        by = c("product_name" = "item")
+      ) %>%
+      mutate(
+        product_level = if_else(is.na(product_level), level, product_level)
+      ) %>%
       select(-level) %>%
       group_by(name) %>%
       mutate(
@@ -147,7 +222,10 @@ setup <- function() {
         }
       ) %>%
       ungroup() %>%
-      mutate(production_per_machine = crafting_speed * product_amount / recipe_time)
+      mutate(
+        production_per_machine =
+          crafting_speed * product_amount / recipe_time
+      )
     
     all_dat_levels_loop <- mutate(
       all_dat_levels_loop,
@@ -156,18 +234,30 @@ setup <- function() {
     
     n <- n + 1
   }
+  
   rm(n)
   
   final_dat <- all_dat_levels_loop
   
   # Compile all level items
-  levels_all <- bind_rows(levels_loop[[1]], levels_loop[[2]], levels_loop[[3]],
-                          levels_loop[[4]], levels_loop[[5]], levels_loop[[6]],
-                          levels_loop[[7]], levels_loop[[8]], levels_loop[[9]]) %>%
+  levels_all <- bind_rows(
+    levels_loop[[1]],
+    levels_loop[[2]],
+    levels_loop[[3]],
+    levels_loop[[4]],
+    levels_loop[[5]],
+    levels_loop[[6]],
+    levels_loop[[7]],
+    levels_loop[[8]],
+    levels_loop[[9]]
+  ) %>%
     distinct() %>%
     arrange(level)
   
-  dup_levels <- levels_all[duplicated(levels_all$item) | duplicated(levels_all$item, fromLast = TRUE), ]
+  dup_levels <- levels_all[
+    duplicated(levels_all$item) |
+      duplicated(levels_all$item, fromLast = TRUE),
+  ]
   
   # Check problematic recipes
   problem_recipes <- all_dat_levels_loop %>%
@@ -204,19 +294,35 @@ setup <- function() {
   
   # Initialize a main bus dataframe
   main_bus <- levels_all %>%
-    mutate(produced = NA, consumed = NA, available = NA)
+    mutate(
+      produced  = NA,
+      consumed  = NA,
+      available = NA
+    )
   
   # Create choice sets
   choices_machines <- all_dat_levels_loop %>%
     select(machine_name, recipe_category, crafting_speed) %>%
     distinct() %>%
     arrange(machine_name, recipe_category, crafting_speed) %>%
-    mutate(accessible = if_else(
-      machine_name %in% c(
-        "assembling-machine-1", "assembling-machine-2", "centrifuge", "chemical-plant",
-        "crusher", "electric-furnace", "oil-refinery", "rocket-silo", "steel-furnace", "stone-furnace"
-      ), 1, 0
-    ))
+    mutate(
+      accessible = if_else(
+        machine_name %in% c(
+          "assembling-machine-1",
+          "assembling-machine-2",
+          "centrifuge",
+          "chemical-plant",
+          "crusher",
+          "electric-furnace",
+          "oil-refinery",
+          "rocket-silo",
+          "steel-furnace",
+          "stone-furnace"
+        ),
+        1,
+        0
+      )
+    )
   
   choices_recipes <- all_dat_levels_loop %>%
     select(product_name, name) %>%
@@ -225,7 +331,9 @@ setup <- function() {
     group_by(product_name) %>%
     mutate(choices = n()) %>%
     ungroup() %>%
-    mutate(preferred = if_else(product_name == name | choices == 1, 1, 0)) %>%
+    mutate(
+      preferred = if_else(product_name == name | choices == 1, 1, 0)
+    ) %>%
     #add exceptions
     change_recipe("carbonic-asteroid-chunk", "carbonic-asteroid-crushing") %>%
     change_recipe("fluoroketone-cold", "fluoroketone-cooling") %>%
@@ -249,7 +357,11 @@ setup <- function() {
     ungroup()
   
   if (nrow(choices_recipes_dup) > 0) {
-    cat("⚠️ There are", nrow(choices_recipes_dup), "duplicate recipe choices")
+    cat(
+      "⚠️ There are",
+      nrow(choices_recipes_dup),
+      "duplicate recipe choices"
+    )
     print(choices_recipes_dup)
   }
   
@@ -259,27 +371,44 @@ setup <- function() {
     ungroup()
   
   if (nrow(choices_recipes_remaining) > 0) {
-    cat("⚠️ There are", nrow(choices_recipes_remaining), "products without a chosen recipe")
+    cat(
+      "⚠️ There are",
+      nrow(choices_recipes_remaining),
+      "products without a chosen recipe"
+    )
     print(choices_recipes_remaining)
   }
   
   outputs <- final_dat %>%
-    select(name, recipe_no, recipe_level, product_no, product_name, product_amount) %>%
+    select(
+      name,
+      recipe_no,
+      recipe_level,
+      product_no,
+      product_name,
+      product_amount
+    ) %>%
     distinct() %>%
     mutate(
       produced = product_amount,
-      item = product_name,
+      item     = product_name,
       consumed = NA
     ) %>%
     select(name, recipe_no, recipe_level, item, produced, consumed)
   
-  
   inputs <- final_dat %>%
-    select(name, recipe_no, recipe_level, ing_no, ing_name, ing_amount) %>%
+    select(
+      name,
+      recipe_no,
+      recipe_level,
+      ing_no,
+      ing_name,
+      ing_amount
+    ) %>%
     distinct() %>%
     mutate(
       consumed = ing_amount,
-      item = ing_name,
+      item     = ing_name,
       produced = NA
     ) %>%
     select(name, recipe_no, recipe_level, item, produced, consumed)
@@ -290,15 +419,17 @@ setup <- function() {
     summarise(
       consumed = na.omit(consumed)[1],
       produced = na.omit(produced)[1],
-      .groups = "drop"
+      .groups  = "drop"
     ) %>%
     arrange(recipe_level, name)
   
-  return(list(
-    main_bus,
-    choices_machines,
-    choices_recipes,
-    final_dat,
-    consumed_produced
-  ))
+  return(
+    list(
+      main_bus,
+      choices_machines,
+      choices_recipes,
+      final_dat,
+      consumed_produced
+    )
+  )
 }
