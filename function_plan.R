@@ -1,10 +1,9 @@
 #create a function that iterates on levels and produces the number of machines and inputs necessary
 plan_project <- function(
-    data_input    = recipes,
-    data_recipes  = choices_recipes,
+    data_input = recipes,
+    data_recipes = choices_recipes,
     data_machines = choices_machines,
-    data_inout    = consumed_produced,
-    data_main_bus = main_bus,
+    data_inout = consumed_produced,
     product,
     quantity,
     usebus = "N",
@@ -137,11 +136,11 @@ plan_project <- function(
   #iterate on recipes in plan_simple then choose with select_machines()
   plan_simple_final <- plan_simple
   
-  for (recipe in unique(plan_simple$name)) {
+  for (recipe in na.omit(unique(plan_simple$name))) {
     
     needed <- plan_simple %>%
       filter(name == recipe) %>%
-      pull(product_amount) %>%
+      pull(quantity_needed) %>%
       first()
     
     chosen <- select_machine(
@@ -161,14 +160,14 @@ plan_project <- function(
   #do the same for the detailed plan
   plan_detailed_final <- plan_detailed
   
-  for (ident in unique(plan_detailed$ID)) {
+  for (ident in na.omit(unique(plan_detailed$ID))) {
     
     rows <- plan_detailed_final %>%
       filter(ID == ident)
     
     needed <- rows %>%
       filter(ID == ident) %>%
-      pull(product_amount) %>%
+      pull(quantity_needed) %>%
       first()
     
     recipe <- rows %>%
