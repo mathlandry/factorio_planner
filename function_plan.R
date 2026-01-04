@@ -226,17 +226,17 @@ plan_project <- function(
     left_join(changes, by = "item") %>%
     mutate(
       produced = if_else(
-        diff > 0,
+        !is.na(diff) & diff > 0,
         coalesce(produced, 0) + diff,
         produced
       ),
       consumed = if_else(
-        diff < 0,
+        !is.na(diff) & diff < 0,
         coalesce(consumed, 0) - diff,
         consumed
       ),
       available = if_else(
-        diff != 0,
+        !is.na(diff) & diff != 0,
         coalesce(produced, 0) - coalesce(consumed, 0),
         available
       )
