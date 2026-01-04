@@ -107,6 +107,13 @@ select_machine <- function(
       arrange(number_required, desc(whole), desc(electric))
   }
   
+  if (!exists("input_machines") || nrow(input_machines) == 0) {
+    stop(paste0(
+      "No accessible machines found for recipe: ", recipe,
+      " (priority=", priority, ")"
+    ))
+  }
+  
   return(input_machines$machine_name[1])
 }
 
