@@ -226,9 +226,9 @@ plan_project <- function(
     left_join(data_inout, by = c("name", "recipe_no")) %>%
     mutate(
       consumed_sum =
-        round(number_machines * consumed * crafting_speed / recipe_time, 1),
+        round(number_machines * consumed * crafting_speed / recipe_time, 3),
       produced_sum =
-        round(number_machines * produced * crafting_speed / recipe_time, 1),
+        round(number_machines * produced * crafting_speed / recipe_time, 3),
       diff =
         coalesce(produced_sum, 0) - coalesce(consumed_sum, 0)
     ) %>%
